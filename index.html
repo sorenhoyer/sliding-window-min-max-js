@@ -1,0 +1,246 @@
+<html>
+	<head>
+		<style>
+			.input {
+			  display: flex;
+			}
+
+			.input input {
+			  width: 200px;
+			  padding: 5px 10px;
+			  outline: none;
+			}
+
+			.input button {
+			  padding: 5px 10px;
+			  border: 1px solid light gray;
+			}
+
+			div {
+			  padding: 5px 10px;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="input">
+		  <input type="text" id="number" />
+		  <button onClick="addNumber()">Add</button>
+		</div>
+		<div class="result">
+		  <div class="data" id="data">
+		    Data: 
+		  </div>
+		  <div class="max" id="max">
+		    Max: undefined!
+		  </div>
+		  <div class="min" id="min">
+		    Min: undefined!
+		  </div>
+		</div>
+		<div class="debug">
+		  <div>
+		    <code class="data" id="maxHeap">
+		      Max Heap:
+		    </code>
+		  </div>
+		  <div>
+		    <code class="data" id="minHeap">
+		      Min Heap:
+		    </code>
+		  </div>
+		  <div>
+		    <code class="max" id="queue">
+		    Queue:
+		    </code>
+		  </div>
+		  <div>
+		    <code class="max" id="frequency">
+		      Frequency:
+		    </code>
+		  </div>
+		</div>
+		<script>
+			const swap = (data, i, j) => {
+			  let temp = data[i];
+			  data[i] = data[j];
+			  data[j] = temp;
+			}
+
+			const customCompareMax = (a,b) => { return a < b; }
+
+			const customCompareMin = (a,b) => { return a > b; }
+
+			class Heap {
+			  constructor(customCompareFunction) {
+			    this.data = [];
+			    this.inHeap = {};
+			    this.size = 0;
+			    this.customCompareFunction = customCompareFunction;
+			  }
+			  
+			  head() {
+			    return this.data[0];
+			  }
+			  // add item O(logN);
+			  add(number) {
+			  
+			    if (!this.inHeap[number]) {
+			      this.data[this.size++] = number;
+			      let current = this.size - 1;
+
+			      while (current > 0) {
+			        if (this.customCompareFunction(this.data[current >> 1], this.data[current])) {
+			          swap(this.data, current >> 1, current);
+			          current >>= 1;
+			        } else {
+			          break;
+			        }
+			      }
+			      this.inHeap[number] = true;
+			    }
+			    
+			  }
+			  // remove head O(logN);
+			  remove() {
+			    this.size--;
+			    delete this.inHeap[this.data[0]];
+			    this.data[0] = this.data[this.size];
+
+			    let current = 0;
+			    while (current * 2 + 1 < this.size) {
+			      let next = current * 2 + 1;
+			      if (current * 2 + 2 < this.size && this.customCompareFunction(this.data[current * 2 + 1], this.data[current * 2 + 2])) {
+			        next = current * 2 + 2;
+			      } 
+			      
+			      if (this.customCompareFunction(this.data[current], this.data[next])) {
+			        swap(this.data, current, next);
+			        current = next;
+			      } else {
+			        break;
+			      }
+			    }
+			    
+			  }
+			}
+
+			class Queue {
+			  constructor(maxSize) {
+			    this.maxSize = maxSize;
+			    this.size = 0;
+			    this.data = [];
+			    this.head = -1;
+			  }
+			  
+			  // add a number and return the removed item if any
+			  add(number) {
+			    let next = (this.head + 1) % this.maxSize;
+			    let removedItem = this.data[next];
+			    this.data[next] = number;
+			    this.head = next;
+			    
+			    if (removedItem === undefined) {
+			      this.size++;
+			    }
+			    
+			    return removedItem;
+			  }
+			  
+			  get(i) {
+			    return this.data[(this.head - this.size + 1 + i + this.maxSize ) % this.maxSize];
+			  }
+			}
+
+			class Solution {
+			  constructor(n) {
+			    this.n = n;
+			    this.queue = new Queue(this.n);
+			    this.minHeap = new Heap(customCompareMin);
+			    this.maxHeap = new Heap(customCompareMax);
+			    this.frequency = {};
+			  }
+			  add(number) {
+			    let removedItem = this.queue.add(number);
+			    
+			    if (!this.frequency[number]) {
+			      this.frequency[number] = 1;
+			      this.maxHeap.add(number);
+			      this.minHeap.add(number);
+			    } else {
+			      this.frequency[number]++;
+			    }
+			    
+			    if (removedItem !== undefined) {
+			      this.frequency[removedItem]--;
+			      
+			      if (!this.frequency[removedItem]) {
+			        delete this.frequency[removedItem];
+			      }
+			      
+			      // remove head if frequency is zero
+			      while (!this.frequency[this.maxHeap.head()]) {
+			        this.maxHeap.remove();
+			      }
+			      while (!this.frequency[this.minHeap.head()]) {
+			        this.minHeap.remove();
+			      }
+			    }
+			  }
+			  
+			  size() {
+			    return this.queue.size;
+			  }
+			  
+			  get(i) {
+			    return this.queue.get(i);
+			  }
+			  
+			  max() {
+			    return this.maxHeap.head();
+			  }
+
+			  min() {
+			    return this.minHeap.head();
+			  }
+			}
+
+			/*** use of solution here!! **/
+			let solution = new Solution(3000);
+			let numberInput = document.getElementById("number");
+			let data = document.getElementById("data");
+			let maxResult = document.getElementById("max");
+			let minResult = document.getElementById("min");
+			let maxHeapData = document.getElementById("maxHeap");
+			let minHeapData = document.getElementById("minHeap");
+			let queueData = document.getElementById("queue");
+			let frequencyData = document.getElementById("frequency");
+
+			function addNumber() {
+			  let value = parseInt(numberInput.value);
+			  
+			  if (isNaN(value)) {
+			    alert("Please input a number!");
+			  } else {
+			    solution.add(value);
+			  }
+			  
+			  maxResult.innerHTML = "Max: " + solution.max();
+			  minResult.innerHTML = "Min: " + solution.min();
+			  
+			  // gather data
+			  let dataString = "";
+			  for (let i = 0; i < solution.size(); i++) {
+			    dataString += " " + solution.get(i);
+			  }
+			  
+			  data.innerHTML = "Data: " + dataString;
+			  maxHeapData.innerHTML = "Max Heap: " + JSON.stringify(solution.maxHeap.data.slice(0, solution.maxHeap.size));
+			  minHeapData.innerHTML = "Min Heap: " + JSON.stringify(solution.minHeap.data.slice(0, solution.minHeap.size));
+			  queueData.innerHTML = "Queue: " + JSON.stringify(solution.queue);
+			  frequencyData.innerHTML = "Frequency: " + JSON.stringify(solution.frequency);
+			  
+			  numberInput.value = parseInt(Math.random() * 1000);
+			}
+		</script>
+	</body>
+</html>
